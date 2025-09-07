@@ -1,7 +1,10 @@
-from fastapi import FastAPI, Request
+from typing import Annotated
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from datetime import datetime
 import time
 from zoneinfo import ZoneInfo
+
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from models import Customer
 from db import create_all_tables
 from .routers import customers, invoices, transactions, plans
@@ -11,6 +14,8 @@ app.include_router(customers.router)
 app.include_router(invoices.router)
 app.include_router(transactions.router)
 app.include_router(plans.router)
+
+security = HTTPBasic()
 
 # Imprimir todos los headers que están enviando a todos lo endpoints
 @app.middleware("http")
@@ -23,6 +28,8 @@ async def log_header(request: Request, call_next):
     
     response = await call_next(request)
     return response
+
+
 
 @app.middleware("http")
 async def log_request_time(request: Request, call_next):
@@ -42,8 +49,11 @@ country_timezones = {
 }
 
 @app.get("/")
-async def root():
-    return {"Message:": "Hola mundo!"}
+async def root(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
+    if credentials.username == "carlos" and credentials.password == "12345":
+        return {"Message:": f"Hola , {credentials.username}"}
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
 @app.get("/time/{iso_code}")
 async def getHour(iso_code: str):
