@@ -2,12 +2,13 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from datetime import datetime
 import time
+import os
 from zoneinfo import ZoneInfo
-
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from models import Customer
 from db import create_all_tables
 from .routers import customers, invoices, transactions, plans
+from dotenv import load_dotenv
 
 app = FastAPI(lifespan=create_all_tables)
 app.include_router(customers.router)
@@ -16,6 +17,10 @@ app.include_router(transactions.router)
 app.include_router(plans.router)
 
 security = HTTPBasic()
+load_dotenv()
+
+user = os.getenv("USER")
+password = os.getenv("PASSWORD")
 
 # Imprimir todos los headers que están enviando a todos lo endpoints
 @app.middleware("http")
@@ -50,7 +55,7 @@ country_timezones = {
 
 @app.get("/")
 async def root(credentials: Annotated[HTTPBasicCredentials, Depends(security)]):
-    if credentials.username == "carlos" and credentials.password == "12345":
+    if credentials.username == user and credentials.password == password:
         return {"Message:": f"Hola , {credentials.username}"}
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
